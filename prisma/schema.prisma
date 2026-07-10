@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MECHANIC
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Availability {
+  ONLINE
+  OFFLINE
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  ON_THE_WAY
+  ARRIVED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  phone          String?
+  passwordHash   String
+  role           Role           @default(USER)
+  status         AccountStatus  @default(ACTIVE)
+  availability   Availability   @default(OFFLINE)
+  lastLat        Float?
+  lastLng        Float?
+  rating         Float          @default(5)
+  completedJobs  Int            @default(0)
+  fcmToken       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  driverRequests    ServiceRequest[] @relation("DriverRequests")
+  mechanicRequests  ServiceRequest[] @relation("MechanicRequests")
+  vehicles          Vehicle[]
+  sentMessages      Message[]        @relation("SentMessages")
+  receivedMessages  Message[]        @relation("ReceivedMessages")
+  invoicesAsDriver  Invoice[]        @relation("DriverInvoices")
+  invoicesAsMech    Invoice[]        @relation("MechanicInvoices")
+  ratingsGiven      Rating[]         @relation("RatingsGiven")
+  ratingsReceived   Rating[]         @relation("RatingsReceived")
+
+  @@index([role, status])
+  @@index([role, availability])
+}
+
+model ServiceRequest {
+  id               String        @id @default(uuid())
+  driverId         String
+  mechanicId       String?
+  driverName       String
+  mechanicName     String?
+  status           RequestStatus @default(PENDING)
+  issueType        String        @default("Roadside Assistance")
+  notes            String?
+  userLat          Float
+  userLng          Float
+  mechanicLat      Float?
+  mechanicLng      Float?
+  distanceKm       Float?
+  etaMinutes       Int?
+  acceptedAt       DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  driver    User      @relation("DriverRequests", fields: [driverId], references: [id])
+  mechanic  User?     @relation("MechanicRequests", fields: [mechanicId], references: [id])
+  messages  Message[]
+  invoice   Invoice?
+  rating    Rating?
+
+  @@index([status, createdAt])
+  @@index([driverId, status])
+  @@index([mechanicId, status])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  chatId     String
+  requestId  String?
+  senderId   String
+  receiverId String
+  body       String
+  createdAt  DateTime @default(now())
+
+  sender   User            @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User            @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  request  ServiceRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([chatId, createdAt])
+}
+
+model Vehicle {
+  id          String   @id @default(uuid())
+  userId      String
+  make        String
+  model       String
+  year        String
+  plateNumber String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  requestId   String   @unique
+  driverId    String
+  mechanicId  String
+  amount      Float
+  description String
+  paid        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  request  ServiceRequest @relation(fields: [requestId], references: [id])
+  driver   User           @relation("DriverInvoices", fields: [driverId], references: [id])
+  mechanic User           @relation("MechanicInvoices", fields: [mechanicId], references: [id])
+}
+
+model Rating {
+  id         String   @id @default(uuid())
+  requestId  String   @unique
+  driverId   String
+  mechanicId String
+  score      Float
+  review     String?
+  createdAt  DateTime @default(now())
+
+  request  ServiceRequest @relation(fields: [requestId], references: [id])
+  driver   User           @relation("RatingsGiven", fields: [driverId], references: [id])
+  mechanic User           @relation("RatingsReceived", fields: [mechanicId], references: [id])
+}
