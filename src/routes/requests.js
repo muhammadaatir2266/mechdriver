@@ -201,7 +201,19 @@ router.patch('/:id/status', requireRoles('MECHANIC'), async (req, res, next) => 
       ON_THE_WAY: 'ARRIVED',
       ARRIVED: 'COMPLETED',
     };
-    const nextStatus = req.body.status || nextMap[request.status];
+    const labelToCode = {
+      'ON THE WAY': 'ON_THE_WAY',
+      'ON_THE_WAY': 'ON_THE_WAY',
+      ARRIVED: 'ARRIVED',
+      COMPLETED: 'COMPLETED',
+      'On the Way': 'ON_THE_WAY',
+      Arrived: 'ARRIVED',
+      Completed: 'COMPLETED',
+    };
+    const rawNext = req.body.status;
+    const nextStatus =
+      (rawNext ? labelToCode[rawNext] || String(rawNext).toUpperCase().replace(/\s+/g, '_') : null)
+      || nextMap[request.status];
     if (!nextStatus || !['ON_THE_WAY', 'ARRIVED', 'COMPLETED'].includes(nextStatus)) {
       return res.status(400).json({ error: 'Invalid status transition' });
     }
