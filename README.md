@@ -53,10 +53,13 @@ Default admin (from `.env`):
 | POST | `/api/auth/register` | — | Register User/Mechanic |
 | POST | `/api/auth/login` | — | Login + JWT |
 | GET | `/api/auth/me` | JWT | Current profile |
-| POST | `/api/requests` | User | Create roadside request |
+| POST | `/api/requests` | User | Create request with offered price |
+| GET | `/api/requests/pricing` | JWT | Category minimum prices |
 | GET | `/api/requests/nearby?lat=&lng=` | Mechanic | Nearby pending jobs |
 | GET | `/api/requests/active` | JWT | Active job |
-| POST | `/api/requests/:id/accept` | Mechanic | Accept job |
+| POST | `/api/requests/:id/offers` | Mechanic | Send/update a counter-offer |
+| POST | `/api/requests/:id/offers/:offerId/accept` | User | Accept a mechanic offer |
+| POST | `/api/requests/:id/offers/:offerId/reject` | User | Reject a mechanic offer |
 | PATCH | `/api/requests/:id/status` | Mechanic | Advance status |
 | POST | `/api/requests/:id/location` | Mechanic | Live location |
 | POST | `/api/requests/:id/cancel` | User | Cancel |
@@ -74,6 +77,9 @@ Connect with `auth: { token: "<JWT>" }`.
 |---|---|---|
 | `request:new` | server → mechanics | New pending request |
 | `request:updated` | server → parties | Status change |
+| `offer:updated` | server → user | Mechanic sent/updated offer |
+| `offer:accepted` | server → mechanic | User accepted offer |
+| `offer:rejected` | server → mechanic | User rejected offer |
 | `location:update` | server → user | Mechanic live position |
 | `chat:message` | both | New chat message |
 | `mechanic:location` | mechanic → server | Push GPS while on job |

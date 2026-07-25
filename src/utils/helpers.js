@@ -18,6 +18,30 @@ export function chatIdFor(a, b) {
   return a < b ? `${a}_${b}` : `${b}_${a}`;
 }
 
+export const CATEGORY_MINIMUM_PRICES = Object.freeze({
+  'Battery / Jump start': 1500,
+  'Flat tire': 1200,
+  'Out of fuel': 1000,
+  Towing: 3000,
+  Lockout: 1800,
+  'Other roadside help': 1500,
+  'SOS EMERGENCY': 2500,
+});
+
+export function minimumPriceFor(issueType) {
+  return CATEGORY_MINIMUM_PRICES[issueType] || CATEGORY_MINIMUM_PRICES['Other roadside help'];
+}
+
+export function priceAssessment(offeredPrice, minimumPrice) {
+  if (!Number.isFinite(offeredPrice) || !Number.isFinite(minimumPrice) || minimumPrice <= 0) {
+    return 'Price unavailable';
+  }
+  const ratio = offeredPrice / minimumPrice;
+  if (ratio >= 1.25) return 'Good Offer';
+  if (ratio >= 1.1) return 'Fair Price';
+  return 'Minimum Price';
+}
+
 /** Map Prisma enum to Android-friendly display strings */
 export const STATUS_LABEL = {
   PENDING: 'Pending',
@@ -34,6 +58,22 @@ export const ROLE_LABEL = {
   ADMIN: 'Admin',
 };
 
+export function serializeOffer(offer) {
+  if (!offer) return null;
+  return {
+    id: offer.id,
+    requestId: offer.requestId,
+    mechanicId: offer.mechanicId,
+    mechanicName: offer.mechanicName,
+    mechanicRating: offer.mechanic?.rating ?? null,
+    mechanicCompletedJobs: offer.mechanic?.completedJobs ?? null,
+    amount: offer.amount,
+    status: offer.status,
+    createdAt: offer.createdAt,
+    updatedAt: offer.updatedAt,
+  };
+}
+
 export function serializeRequest(r) {
   if (!r) return null;
   return {
@@ -46,6 +86,14 @@ export function serializeRequest(r) {
     statusCode: r.status,
     issueType: r.issueType,
     notes: r.notes,
+    minimumPrice: minimumPriceFor(r.issueType),
+    userOfferedPrice: r.userOfferedPrice,
+    agreedPrice: r.agreedPrice,
+    priceTag: priceAssessment(r.userOfferedPrice, minimumPriceFor(r.issueType)),
+    offers: Array.isArray(r.offers) ? r.offers.map(serializeOffer) : undefined,
+    myOffer: Array.isArray(r.offers) && r.offers.length > 0
+      ? serializeOffer(r.offers[0])
+      : undefined,
     location: { lat: r.userLat, lng: r.userLng },
     mechanicLocation:
       r.mechanicLat != null && r.mechanicLng != null

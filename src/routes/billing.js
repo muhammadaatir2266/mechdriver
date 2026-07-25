@@ -8,13 +8,17 @@ router.use(authRequired, loadUser);
 router.post('/', requireRoles('MECHANIC'), async (req, res, next) => {
   try {
     const { requestId, amount, description } = req.body;
-    if (!requestId || amount == null || !description) {
-      return res.status(400).json({ error: 'requestId, amount, description required' });
+    if (!requestId || !description) {
+      return res.status(400).json({ error: 'requestId and description required' });
     }
 
     const request = await prisma.serviceRequest.findUnique({ where: { id: requestId } });
     if (!request || request.mechanicId !== req.currentUser.id) {
       return res.status(404).json({ error: 'Request not found' });
+    }
+    const invoiceAmount = request.agreedPrice ?? Number(amount);
+    if (!Number.isFinite(invoiceAmount) || invoiceAmount <= 0) {
+      return res.status(400).json({ error: 'A valid invoice amount is required' });
     }
 
     const invoice = await prisma.invoice.upsert({
@@ -23,11 +27,11 @@ router.post('/', requireRoles('MECHANIC'), async (req, res, next) => {
         requestId,
         driverId: request.driverId,
         mechanicId: req.currentUser.id,
-        amount: Number(amount),
+        amount: invoiceAmount,
         description,
       },
       update: {
-        amount: Number(amount),
+        amount: invoiceAmount,
         description,
       },
     });

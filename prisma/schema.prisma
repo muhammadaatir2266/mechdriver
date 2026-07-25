@@ -32,6 +32,12 @@ enum RequestStatus {
   CANCELLED
 }
 
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model User {
   id             String         @id @default(uuid())
   name           String
@@ -58,6 +64,7 @@ model User {
   invoicesAsMech    Invoice[]        @relation("MechanicInvoices")
   ratingsGiven      Rating[]         @relation("RatingsGiven")
   ratingsReceived   Rating[]         @relation("RatingsReceived")
+  serviceOffers     ServiceOffer[]
 
   @@index([role, status])
   @@index([role, availability])
@@ -72,6 +79,8 @@ model ServiceRequest {
   status           RequestStatus @default(PENDING)
   issueType        String        @default("Roadside Assistance")
   notes            String?
+  userOfferedPrice Int?
+  agreedPrice      Int?
   userLat          Float
   userLng          Float
   mechanicLat      Float?
@@ -88,9 +97,28 @@ model ServiceRequest {
   messages  Message[]
   invoice   Invoice?
   rating    Rating?
+  offers    ServiceOffer[]
 
   @@index([status, createdAt])
   @@index([driverId, status])
+  @@index([mechanicId, status])
+}
+
+model ServiceOffer {
+  id           String      @id @default(uuid())
+  requestId    String
+  mechanicId   String
+  mechanicName String
+  amount       Int
+  status       OfferStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  request  ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mechanic User           @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, mechanicId])
+  @@index([requestId, status])
   @@index([mechanicId, status])
 }
 
